@@ -1,68 +1,28 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
-from wordcloud import WordCloud
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.naive_bayes import MultinomialNB
 
-# Load dataset
-df = pd.read_csv('data_preprocessed.csv')
+# Load data
+df = pd.read_csv("data_preprocessed.csv")
+df = df[['normalized_text']].dropna().reset_index(drop=True)
 
-# Tambahkan label dummy berbasis keyword sederhana
-def simple_sentiment(text):
-    positive_keywords = ['bagus', 'menarik', 'keren', 'lucu', 'hebat', 'baik']
-    negative_keywords = ['jelek', 'buruk', 'bosan', 'gagal', 'kurang', 'tidak']
-    text = text.lower()
-    if any(word in text for word in positive_keywords):
-        return 'positif'
-    elif any(word in text for word in negative_keywords):
-        return 'negatif'
-    else:
-        return None  # Netral diabaikan
+st.title("Klasifikasi Sentimen Manual: Animasi Jumbo 🎬")
+st.write("Silakan pilih sentimen (positif atau negatif) untuk setiap kalimat berikut:")
 
-df['label'] = df['normalized_text'].astype(str).apply(simple_sentiment)
-df = df[df['label'].isin(['positif', 'negatif'])]  # Hanya ambil 2 kelas
+# Batas jumlah yang ditampilkan
+num_rows = st.slider("Jumlah data yang ditampilkan:", 1, min(20, len(df)), 5)
 
-st.title("Klasifikasi Sentimen Positif dan Negatif 🎯")
-st.write("Model Naïve Bayes berbasis keyword untuk klasifikasi 2 kelas")
+# Tempat simpan jawaban user
+user_labels = []
 
-# Tampilkan data
-st.subheader("Contoh Data")
-st.write(df[['normalized_text', 'label']].head())
+for i in range(num_rows):
+    st.markdown(f"**{i+1}.** {df.loc[i, 'normalized_text']}")
+    label = st.radio(f"Pilih sentimen untuk kalimat {i+1}:", ['positif', 'negatif'], key=i)
+    user_labels.append(label)
 
-# Visualisasi distribusi sentimen
-st.subheader("Distribusi Sentimen")
-sentiment_counts = df['label'].value_counts()
-st.bar_chart(sentiment_counts)
+if st.button("Simpan Jawaban"):
+    labeled_df = df.iloc[:num_rows].copy()
+    labeled_df['label_user'] = user_labels
+    labeled_df.to_csv("hasil_label_user.csv", index=False)
+    st.success("Label berhasil disimpan ke `hasil_label_user.csv`!")
 
-# Wordcloud per kelas
-st.subheader("Wordcloud per Sentimen")
-for sentiment in ['positif', 'negatif']:
-    st.markdown(f"**Sentimen {sentiment.capitalize()}**")
-    text = " ".join(df[df['label'] == sentiment]['text_without_stopwords'].astype(str))
-    wordcloud = WordCloud(width=800, height=400, background_color='white').generate(text)
-    plt.figure(figsize=(10, 5))
-    plt.imshow(wordcloud, interpolation='bilinear')
-    plt.axis("off")
-    st.pyplot(plt)
-
-# Train model
-st.subheader("Prediksi Sentimen dari Input Pengguna")
-vectorizer = TfidfVectorizer()
-X = vectorizer.fit_transform(df['normalized_text'].astype(str))
-y = df['label']
-
-model = MultinomialNB()
-model.fit(X, y)
-
-# Prediksi dari input pengguna
-user_input = st.text_area("Masukkan ulasan tentang film Animasi Jumbo:")
-if st.button("Prediksi"):
-    if user_input.strip() != "":
-        input_vec = vectorizer.transform([user_input])
-        prediction = model.predict(input_vec)[0]
-        st.write(f"**Hasil Prediksi Sentimen:** {prediction}")
-    else:
-        st.warning("Silakan masukkan teks terlebih dahulu.")
-
-st.caption("Model ini hanya mengklasifikasikan sentimen menjadi dua kelas: positif dan negatif.")
+st.caption("Aplikasi ini digunakan untuk pelabelan manual dua kelas: positif dan negatif.")
