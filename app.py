@@ -18,12 +18,13 @@ def simple_sentiment(text):
     elif any(word in text for word in negative_keywords):
         return 'negatif'
     else:
-        return 'netral'
+        return None  # Netral diabaikan
 
 df['label'] = df['normalized_text'].astype(str).apply(simple_sentiment)
+df = df[df['label'].isin(['positif', 'negatif'])]  # Hanya ambil 2 kelas
 
-st.title("Klasifikasi Sentimen Film Animasi Jumbo 🎬")
-st.write("Model Naïve Bayes berbasis keyword untuk klasifikasi sentimen")
+st.title("Klasifikasi Sentimen Positif dan Negatif 🎯")
+st.write("Model Naïve Bayes berbasis keyword untuk klasifikasi 2 kelas")
 
 # Tampilkan data
 st.subheader("Contoh Data")
@@ -34,7 +35,7 @@ st.subheader("Distribusi Sentimen")
 sentiment_counts = df['label'].value_counts()
 st.bar_chart(sentiment_counts)
 
-# Wordcloud untuk tiap kelas
+# Wordcloud per kelas
 st.subheader("Wordcloud per Sentimen")
 for sentiment in ['positif', 'negatif']:
     st.markdown(f"**Sentimen {sentiment.capitalize()}**")
@@ -45,7 +46,7 @@ for sentiment in ['positif', 'negatif']:
     plt.axis("off")
     st.pyplot(plt)
 
-# Train model dan prediksi
+# Train model
 st.subheader("Prediksi Sentimen dari Input Pengguna")
 vectorizer = TfidfVectorizer()
 X = vectorizer.fit_transform(df['normalized_text'].astype(str))
@@ -54,6 +55,7 @@ y = df['label']
 model = MultinomialNB()
 model.fit(X, y)
 
+# Prediksi dari input pengguna
 user_input = st.text_area("Masukkan ulasan tentang film Animasi Jumbo:")
 if st.button("Prediksi"):
     if user_input.strip() != "":
@@ -63,4 +65,4 @@ if st.button("Prediksi"):
     else:
         st.warning("Silakan masukkan teks terlebih dahulu.")
 
-st.caption("Model ini menggunakan label dummy berbasis keyword sederhana. Untuk hasil lebih akurat, gunakan data berlabel asli.")
+st.caption("Model ini hanya mengklasifikasikan sentimen menjadi dua kelas: positif dan negatif.")
